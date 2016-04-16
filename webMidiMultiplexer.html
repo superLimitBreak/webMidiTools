@@ -1,0 +1,119 @@
+<html>
+
+<head>
+	<meta charset="utf-8"/>
+	<title>webMidiMultiplexer</title>
+	
+	<style type="text/css">
+		
+	</style>
+</head>
+
+<body>
+	<h1>webMidiMultiplexer</h1>
+	<div>
+		<h2>Input</h2>
+		<ul id="midi_inputs"></ul>
+	</div>
+	<div>
+		<h2>Output</h2>
+		<ul id="midi_outputs"></ul>
+	</div>
+	
+	<script type="text/javascript">
+		
+		// Variables -----------------------------------------------------------
+		
+		var midiDevicesActive = new Map();
+		
+		// Midi Event Transfer -------------------------------------------------
+		
+		function onMidiMessage(msg) {
+			for (var midiDevice of midiDevicesActive.keys()) {
+				if (midiDevice.type == "output") {
+					console.log(msg);
+					//outputDevice.send(msg);
+				}
+			}
+		}
+		
+		// Persist Selected Devices --------------------------------------------
+		
+		function persist_midiDevicesActive_base(args) {
+			return {input: {}, output: {}};
+		}
+		function persist_midiDevicesActive() {
+			data = persist_midiDevicesActive_base();
+			for (var midiDevice of midiDevicesActive.keys()) {
+				data[midiDevice.type][midiDevice.name] = true;
+			}
+			localStorage.midiDevicesActive = JSON.stringify(data);
+		}
+		function load_midiDevicesActive() {
+			try {return JSON.parse(localStorage.midiDevicesActive);}
+			catch (e) {return persist_midiDevicesActive_base();}
+		}
+		
+		// Selected Devices Management -----------------------------------------
+		
+		function onMidiDeviceItemUpdate(checked, midiDevice) {
+			if (checked) {
+				midiDevicesActive.set(midiDevice);
+			}
+			else {
+				midiDevicesActive.delete(midiDevice);
+			}
+			if (midiDevice.type == 'input') {
+				midiDevice.onmidimessage = checked ? onMidiMessage : undefined;
+			}
+		}
+		
+		// UI Events -----------------------------------------------------------
+		
+		function onMidiUIItemChanged(event, midiDevice) {
+			var checked = event;
+			if (event.target != undefined) {
+				checked = event.target.checked;
+			}
+			//console.log(event, midiDevice);
+			onMidiDeviceItemUpdate(checked, midiDevice);
+			//console.log(midiDevicesActive);
+			persist_midiDevicesActive();
+		}
+		
+		// UI Init -------------------------------------------------------------
+		
+		function addMidiUIItems(id, midiDevices) {
+			var localStorage_midiDevicesActive = load_midiDevicesActive();
+			var ul = document.getElementById(id);
+			ul.innerHTML = "";
+			for (var midiDevice of midiDevices.values()) {
+				onMidiDeviceItemUpdate(localStorage_midiDevicesActive[midiDevice.type][midiDevice.name], midiDevice);
+				var li = document.createElement('li');
+				var checkbox = document.createElement('input');
+				checkbox.setAttribute('type', 'checkbox');
+				checkbox.setAttribute('value', midiDevice.name);
+				checkbox.checked = localStorage_midiDevicesActive[midiDevice.type][midiDevice.name];
+				checkbox.onchange = function(event) {onMidiUIItemChanged(event, midiDevice);};
+				li.appendChild(checkbox);
+				li.appendChild(document.createTextNode(midiDevice.name));
+				ul.appendChild(li);
+			}
+		}
+		
+		// Midi Init -----------------------------------------------------------
+		
+		function bindMidiDevices(midiAccess) {
+			addMidiUIItems('midi_inputs', midiAccess.inputs);
+			addMidiUIItems('midi_outputs', midiAccess.outputs);
+		}
+		
+		function initMidi(bindMidiDevices) {
+			if (window.navigator.requestMIDIAccess) {
+				window.navigator.requestMIDIAccess({sysex: false}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
+			} else {console.warn("No browser MIDI support");}
+		}
+		
+		initMidi(bindMidiDevices);
+	</script>
+</body>
