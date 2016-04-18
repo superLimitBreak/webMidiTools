@@ -31,8 +31,7 @@
 		function onMidiMessage(msg) {
 			for (var midiDevice of midiDevicesActive.keys()) {
 				if (midiDevice.type == "output") {
-					console.log(msg);
-					//outputDevice.send(msg);
+					midiDevice.send(msg.data);  // https://www.w3.org/TR/2015/WD-webmidi-20150317/#midioutput-interface
 				}
 			}
 		}
