@@ -24,12 +24,13 @@
 		
 		// Variables -----------------------------------------------------------
 		
-		var midiDevicesActive = new Map();
+		const midiDevicesActive = new Map();
 		
 		// Midi Event Transfer -------------------------------------------------
 		
-		function onMidiMessage(msg) {
-			for (var midiDevice of midiDevicesActive.keys()) {
+		const onMidiMessage = (msg) => {
+			console.debug(msg.data);
+			for (let midiDevice of midiDevicesActive.keys()) {
 				if (midiDevice.type == "output") {
 					midiDevice.send(msg.data);  // https://www.w3.org/TR/2015/WD-webmidi-20150317/#midioutput-interface
 				}
@@ -38,24 +39,24 @@
 		
 		// Persist Selected Devices --------------------------------------------
 		
-		function persist_midiDevicesActive_base(args) {
+		const persist_midiDevicesActive_base = (args) => {
 			return {input: {}, output: {}};
 		}
-		function persist_midiDevicesActive() {
+		const persist_midiDevicesActive = () => {
 			data = persist_midiDevicesActive_base();
-			for (var midiDevice of midiDevicesActive.keys()) {
+			for (let midiDevice of midiDevicesActive.keys()) {
 				data[midiDevice.type][midiDevice.name] = true;
 			}
 			localStorage.midiDevicesActive = JSON.stringify(data);
 		}
-		function load_midiDevicesActive() {
+		const load_midiDevicesActive = () => {
 			try {return JSON.parse(localStorage.midiDevicesActive);}
 			catch (e) {return persist_midiDevicesActive_base();}
 		}
 		
 		// Selected Devices Management -----------------------------------------
 		
-		function onMidiDeviceItemUpdate(checked, midiDevice) {
+		const onMidiDeviceItemUpdate = (checked, midiDevice) => {
 			if (checked) {
 				midiDevicesActive.set(midiDevice);
 			}
@@ -69,8 +70,8 @@
 		
 		// UI Events -----------------------------------------------------------
 		
-		function onMidiUIItemChanged(event, midiDevice) {
-			var checked = event;
+		const onMidiUIItemChanged = (event, midiDevice) => {
+			let checked = event;
 			if (event.target != undefined) {
 				checked = event.target.checked;
 			}
@@ -82,18 +83,20 @@
 		
 		// UI Init -------------------------------------------------------------
 		
-		function addMidiUIItems(id, midiDevices) {
-			var localStorage_midiDevicesActive = load_midiDevicesActive();
-			var ul = document.getElementById(id);
+		const addMidiUIItems = (id, midiDevices) => {
+			const localStorage_midiDevicesActive = load_midiDevicesActive();
+			const ul = document.getElementById(id);
 			ul.innerHTML = "";
-			for (var midiDevice of midiDevices.values()) {
+			for (let midiDevice of midiDevices.values()) {
 				onMidiDeviceItemUpdate(localStorage_midiDevicesActive[midiDevice.type][midiDevice.name], midiDevice);
-				var li = document.createElement('li');
-				var checkbox = document.createElement('input');
+				
+				const checkbox = document.createElement('input');
 				checkbox.setAttribute('type', 'checkbox');
 				checkbox.setAttribute('value', midiDevice.name);
 				checkbox.checked = localStorage_midiDevicesActive[midiDevice.type][midiDevice.name];
 				checkbox.onchange = function(event) {onMidiUIItemChanged(event, midiDevice);};
+				
+				const li = document.createElement('li');
 				li.appendChild(checkbox);
 				li.appendChild(document.createTextNode(midiDevice.name));
 				ul.appendChild(li);
@@ -102,12 +105,12 @@
 		
 		// Midi Init -----------------------------------------------------------
 		
-		function bindMidiDevices(midiAccess) {
+		const bindMidiDevices = (midiAccess) => {
 			addMidiUIItems('midi_inputs', midiAccess.inputs);
 			addMidiUIItems('midi_outputs', midiAccess.outputs);
 		}
 		
-		function initMidi(bindMidiDevices) {
+		const initMidi = (bindMidiDevices) => {
 			if (window.navigator.requestMIDIAccess) {
 				window.navigator.requestMIDIAccess({sysex: false}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
 			} else {console.warn("No browser MIDI support");}
