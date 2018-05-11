@@ -1,0 +1,89 @@
+<html>
+
+<head>
+	<meta charset="utf-8"/>
+	<title>webMidiMultiplexer</title>
+
+	<style type="text/css">
+		#canvas {
+			width: 300px;
+			height: 300px; /* unable to size canvas with css properly - wha? */
+		}
+	</style>
+
+	<!-- <script type="text/javascript" src="music.js"></script> -->
+</head>
+
+<body>
+	<h1>webMidiCircleOfFiths</h1>
+	<canvas id="canvas" width="300" height="300"></canvas>
+
+	<script type="text/javascript">
+		const options = {
+			scaleFactorHeightDivisor: 10,
+			lineWidth: 5,
+			font: '%SIZE%px serif',
+		};
+		const TEMP_circle_of_fifths_text = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F'];
+
+		const canvas = document.getElementById("canvas");
+		const context = canvas.getContext("2d");
+		options.borderWidth = canvas.height/options.scaleFactorHeightDivisor;
+		context.font = options.font.replace('%SIZE%', options.borderWidth);
+
+		console.info('canvas', canvas.width, canvas.height);
+
+		const drawCircle = () => {
+			// Background
+			context.fillStyle = "#FFFFFF";
+			context.fillRect(0, 0, canvas.width, canvas.height);
+
+			context.fillStyle = "#000000";
+			context.strokeStyle = context.fillStyle;
+
+			// Circle
+			context.beginPath();
+			context.lineWidth = options.lineWidth;
+			context.arc(
+				canvas.width/2,
+				canvas.height/2,
+				Math.min(canvas.width, canvas.height)/2 - options.lineWidth - options.borderWidth,
+				(Math.PI/180)*0,
+				(Math.PI/180)*360,
+				false
+			);
+	 		context.stroke();
+			context.closePath();
+
+			// Ticks
+ 			//context.strokeStyle = "black";
+			//context.lineWidth  = 10;
+			context.lineJoin = 'bevel';
+			context.lineCap  = 'round';
+			function* tickGenerator(ticks=12) {
+				for (let index=0 ; index < ticks ; index++) {
+					yield [
+						index,
+						0,  // unfinished
+						TEMP_circle_of_fifths_text[index],
+						(index/ticks) * Math.PI * 2,
+					];
+				}
+			}
+			for (let [index, note, text, angle] of tickGenerator()) {
+				context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
+				context.translate(canvas.width/2, canvas.height/2);
+				context.rotate(angle);
+				context.beginPath();
+				context.moveTo(0, -canvas.height/2 + options.borderWidth);
+				context.lineTo(0, -canvas.height/2 + options.borderWidth + options.lineWidth * 3);
+				context.stroke();
+				context.closePath();
+				context.fillText(text, -context.measureText(text).width/2, -canvas.height/2 + options.borderWidth);
+			}
+
+		};
+
+		drawCircle();
+	</script>
+</body>
