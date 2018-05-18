@@ -20,7 +20,7 @@
 	<canvas id="canvas" width="300" height="300"></canvas>
 
 	<script type="module">
-		import {circle_of_fifths_text, identify_chord} from '../libs/es6/music.js'
+		import {circle_of_fifths_text, identify_chord, normalize_javascript_midi_msg} from '../libs/es6/music.js'
 
 		const options = {
 			scaleFactorHeightDivisor: 10,
@@ -89,5 +89,37 @@
 		};
 
 		drawCircle();
+
+		// System Midi Input ---------------------------------------------------
+
+		function onMidiNoteChange(notes) {
+			console.log(notes);
+		}
+
+		const notes = new Set();
+		function onMidiMessage(midiDevice, msg) {
+			const midiMsg = normalize_javascript_midi_msg(msg);
+			//console.debug(midiDevice.name, midiMsg);
+			if (midiMsg.status.name == 'note_on') {
+				notes.add(midiMsg.note);
+				onMidiNoteChange(notes);
+			}
+			if (midiMsg.status.name == 'note_off') {
+				notes.delete(midiMsg.note);
+				onMidiNoteChange(notes);
+			}
+		};
+
+		function bindMidiDevices(midiAccess) {
+			for (let midiDevice of midiAccess.inputs.values()) {
+				midiDevice.onmidimessage = (msg) => onMidiMessage(midiDevice, msg);
+			}
+		};
+		function initMidi(bindMidiDevices) {
+			if (window.navigator.requestMIDIAccess) {
+				window.navigator.requestMIDIAccess({sysex: false}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
+			} else {console.warn("No browser MIDI support");}
+		};
+		initMidi(bindMidiDevices);
 	</script>
 </body>
