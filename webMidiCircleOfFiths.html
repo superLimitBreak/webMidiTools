@@ -2,7 +2,7 @@
 
 <head>
 	<meta charset="utf-8"/>
-	<title>webMidiMultiplexer</title>
+	<title>webMidiCircleOfFiths</title>
 
 	<style type="text/css">
 		#canvas {
@@ -20,13 +20,14 @@
 	<canvas id="canvas" width="300" height="300"></canvas>
 
 	<script type="module">
-		import {circle_of_fifths_text, identify_chord, normalize_javascript_midi_msg} from '../libs/es6/music.js'
+		import {text_to_note, normalize_octave, circle_of_fifths_notes, circle_of_fifths_text, identify_chord, normalize_javascript_midi_msg} from '../libs/es6/music.js'
 
 		const options = {
 			scaleFactorHeightDivisor: 10,
 			lineWidth: 5,
 			font: '%SIZE%px serif',
 		};
+		const TEMP_circle_of_fifths_notes = [...circle_of_fifths_notes()];
 		const TEMP_circle_of_fifths_text = [...circle_of_fifths_text()];
 
 		const canvas = document.getElementById("canvas");
@@ -36,8 +37,15 @@
 
 		console.info('canvas', canvas.width, canvas.height);
 
-		const drawCircle = () => {
+		function drawCircle(notes) {
+			if (notes) {
+				notes = [...notes.keys()].map(normalize_octave);
+			} else {
+				notes = [];
+			}
+
 			// Background
+			context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
 			//context.fillStyle = "#FFFFFF";
 			//context.fillRect(0, 0, canvas.width, canvas.height);
 			context.clearRect(0, 0, canvas.width, canvas.height);
@@ -68,7 +76,7 @@
 				for (let index=0 ; index < ticks ; index++) {
 					yield [
 						index,
-						0,  // unfinished
+						TEMP_circle_of_fifths_notes[index],
 						TEMP_circle_of_fifths_text[index],
 						(index/ticks) * Math.PI * 2,
 					];
@@ -78,6 +86,10 @@
 				context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
 				context.translate(canvas.width/2, canvas.height/2);
 				context.rotate(angle);
+
+				context.fillStyle = notes.lastIndexOf(note) >= 0 ? "#FF0000":"#000000";
+				context.strokeStyle = context.fillStyle;
+
 				context.beginPath();
 				context.moveTo(0, -canvas.height/2 + options.borderWidth);
 				context.lineTo(0, -canvas.height/2 + options.borderWidth + options.lineWidth * 3);
@@ -94,6 +106,7 @@
 
 		function onMidiNoteChange(notes) {
 			console.log(notes);
+			drawCircle(notes);
 		}
 
 		const notes = new Set();
@@ -121,5 +134,9 @@
 			} else {console.warn("No browser MIDI support");}
 		};
 		initMidi(bindMidiDevices);
+
+		// Test Data -----------------------------------------------------------
+
+		onMidiNoteChange(new Set(['C', 'E', 'G'].map(text_to_note)));
 	</script>
 </body>
