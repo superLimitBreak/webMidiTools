@@ -12,19 +12,22 @@
 	</style>
 
 	<!-- <script type="text/javascript" src="music.js"></script> -->
+	<script type="module" src="../libs/es6/music.js"></script>
 </head>
 
 <body>
 	<h1>webMidiCircleOfFiths</h1>
 	<canvas id="canvas" width="300" height="300"></canvas>
 
-	<script type="text/javascript">
+	<script type="module">
+		import {circle_of_fifths_text, identify_chord} from '../libs/es6/music.js'
+
 		const options = {
 			scaleFactorHeightDivisor: 10,
 			lineWidth: 5,
 			font: '%SIZE%px serif',
 		};
-		const TEMP_circle_of_fifths_text = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F'];
+		const TEMP_circle_of_fifths_text = [...circle_of_fifths_text()];
 
 		const canvas = document.getElementById("canvas");
 		const context = canvas.getContext("2d");
@@ -35,8 +38,9 @@
 
 		const drawCircle = () => {
 			// Background
-			context.fillStyle = "#FFFFFF";
-			context.fillRect(0, 0, canvas.width, canvas.height);
+			//context.fillStyle = "#FFFFFF";
+			//context.fillRect(0, 0, canvas.width, canvas.height);
+			context.clearRect(0, 0, canvas.width, canvas.height);
 
 			context.fillStyle = "#000000";
 			context.strokeStyle = context.fillStyle;
