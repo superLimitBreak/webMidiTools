@@ -12,7 +12,7 @@
 	</style>
 
 	<!-- <script type="text/javascript" src="music.js"></script> -->
-	<script type="module" src="../libs/es6/music.js"></script>
+	<!-- <script type="module" src="../libs/es6/music.js"></script> -->
 </head>
 
 <body>
@@ -20,102 +20,19 @@
 	<canvas id="canvas" width="300" height="300"></canvas>
 
 	<script type="module">
-		import {NUM_NOTES_IN_OCTAVE, text_to_note, normalize_octave, circle_of_fifths_notes, circle_of_fifths_text, identify_chord, normalize_javascript_midi_msg} from '../libs/es6/music.js'
-
-		const options = {
-			scaleFactorHeightDivisor: 10,
-			lineWidth: 5,
-			font: '%SIZE%px serif',
-		};
-		const TEMP_circle_of_fifths_notes = [...circle_of_fifths_notes()];
-		const TEMP_circle_of_fifths_text = [...circle_of_fifths_text()];
+		import {
+			text_to_note,
+			identify_chord,
+			normalize_javascript_midi_msg,
+		} from '../libs/es6/music.js'
+		import {
+			drawCircleOfFifths,
+		} from './canvasCircleOfFifths.js'
 
 		const canvas = document.getElementById("canvas");
 		const context = canvas.getContext("2d");
-		options.borderWidth = canvas.height/options.scaleFactorHeightDivisor;
-		context.font = options.font.replace('%SIZE%', options.borderWidth);
-		const radius = canvas.height/2 - options.borderWidth;
+		const drawCircle = (notes) => drawCircleOfFifths(context, notes);  // TEMP POLYFILL
 
-		console.info('canvas', canvas.width, canvas.height);
-
-		function drawCircle(notes) {
-			if (notes) {
-				notes = [...notes.keys()].map(normalize_octave);
-			} else {
-				notes = [];
-			}
-
-			// Background
-			context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
-			//context.fillStyle = "#FFFFFF";
-			//context.fillRect(0, 0, canvas.width, canvas.height);
-			context.clearRect(0, 0, canvas.width, canvas.height);
-
-			context.fillStyle = "#000000";
-			context.strokeStyle = context.fillStyle;
-
-			// Circle
-			context.beginPath();
-			context.lineWidth = options.lineWidth;
-			context.arc(
-				canvas.width/2,
-				canvas.height/2,
-				Math.min(canvas.width, canvas.height)/2 - options.lineWidth - options.borderWidth,
-				(Math.PI/180)*0,
-				(Math.PI/180)*360,
-				false
-			);
-	 		context.stroke();
-			context.closePath();
-
-			// Ticks
- 			//context.strokeStyle = "black";
-			//context.lineWidth  = 10;
-			context.lineJoin = 'bevel';
-			context.lineCap  = 'round';
-			function* tickGenerator(ticks=NUM_NOTES_IN_OCTAVE) {
-				for (let index=0 ; index < ticks ; index++) {
-					yield [
-						index,
-						TEMP_circle_of_fifths_notes[index],
-						TEMP_circle_of_fifths_text[index],
-						(index/ticks) * Math.PI * 2,
-					];
-				}
-			}
-			for (let [index, note, text, angle] of tickGenerator()) {
-				context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
-				context.translate(canvas.width/2, canvas.height/2);
-				context.rotate(angle);
-
-				context.fillStyle = notes.lastIndexOf(note) >= 0 ? "#FF0000":"#000000";
-				context.strokeStyle = context.fillStyle;
-
-				context.beginPath();
-				context.moveTo(0, -radius);
-				context.lineTo(0, -radius + options.lineWidth * 3);
-				context.stroke();
-				context.closePath();
-				context.fillText(text, -context.measureText(text).width/2, -canvas.height/2 + options.borderWidth);
-			}
-
-			// Chord path
-			context.fillStyle = '#f00'
-			context.beginPath();
-			for (let [index, note, text, angle] of tickGenerator()) {
-				context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
-				context.translate(canvas.width/2, canvas.height/2);
-				context.rotate(angle);
-
-				if (notes.lastIndexOf(note) >= 0) {
-					context.lineTo(0, -radius);
-				}
-			}
-			context.closePath();
-			context.fill();
-
-
-		};
 
 		drawCircle();
 
