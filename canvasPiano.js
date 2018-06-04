@@ -1,5 +1,5 @@
 import {
-	enumerate,
+	enumerate, zip,
 } from '../libs/es6/core.js'
 
 import {
@@ -8,6 +8,9 @@ import {
 	text_to_note,
 } from '../libs/es6/music.js'
 
+
+const WHITE_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(text_to_note).map(normalize_octave);
+const BLACK_NOTES = ['C#', 'D#', 'F#', 'G#', 'A#'].map(text_to_note).map(normalize_octave);
 
 export function drawPiano(context, notes, options={
 	lineWidth: 0.015,
@@ -36,15 +39,35 @@ export function drawPiano(context, notes, options={
 	context.clearRect(0, 0, context.canvas.width, context.canvas.height);
 
 	context.lineWidth = 3;
-	context.fillStyle = "#FF0000";
-	context.strokeStyle = context.fillStyle;
+	//context.fillStyle = "#FF0000";
+	//context.strokeStyle = context.fillStyle;
+
+	const blackNoteColor = "#000000";
+	const whiteNoteColor = "#FFFFFF"
+	const activeNoteColor = "#FF0000";
+	const noteBorderColor = blackNoteColor;
+
+	const NOTE_WIDTH = context.canvas.width/WHITE_NOTES.length;
+	const NOTE_WIDTH_BLACK = NOTE_WIDTH * 0.5;
 
 	// White notes
-	const WHITE_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(text_to_note);
+	context.strokeStyle = noteBorderColor;
 	for (let [i, note] of enumerate(WHITE_NOTES)) {
-		const drawKey = notes.indexOf(note) >= 0 ? context.fillRect : context.strokeRect;
-		drawKey(context.canvas.width/WHITE_NOTES.length * i, 0, context.canvas.width/WHITE_NOTES.length, context.canvas.height);
+		const NOTE_ACTIVE = notes.indexOf(note) >= 0;
+		context.fillStyle = NOTE_ACTIVE ? activeNoteColor : whiteNoteColor;
+		const rectangle_params = [NOTE_WIDTH * i, 0, NOTE_WIDTH, context.canvas.height];
+		context.fillRect(...rectangle_params);
+		context.strokeRect(...rectangle_params);
 	}
+	// Black Notes
+	for (let [i, note] of zip([0, 1, 3, 4, 5], BLACK_NOTES)) {
+		const NOTE_ACTIVE = notes.indexOf(note) >= 0;
+		context.fillStyle = NOTE_ACTIVE ? activeNoteColor : blackNoteColor;
+		const rectangle_params = [(NOTE_WIDTH * i) + (NOTE_WIDTH/2) + (NOTE_WIDTH_BLACK/2), 0, NOTE_WIDTH_BLACK, context.canvas.height * 0.6];
+		context.fillRect(...rectangle_params);
+		context.strokeRect(...rectangle_params);
+	}
+
 
 
 	//context.fillRect(0, 0, 200, 200)
