@@ -17,7 +17,9 @@
 
 <body>
 	<h1>webMidiCircleOfFiths</h1>
-	<canvas id="canvas" width="300" height="300"></canvas>
+	<p><span id="chord"></span></p>
+	<canvas id="canvasCircleOfFiths" width="300" height="300"></canvas>
+	<canvas id="canvasPiano" width="300" height="100"></canvas>
 
 	<script type="module">
 		import {
@@ -25,22 +27,24 @@
 			identify_chord,
 			normalize_javascript_midi_msg,
 		} from '../libs/es6/music.js'
-		import {
-			drawCircleOfFifths,
-		} from './canvasCircleOfFifths.js'
+		import {drawCircleOfFifths,} from './canvasCircleOfFifths.js'
+		import {drawPiano,} from './canvasPiano.js'
 
-		const canvas = document.getElementById("canvas");
-		const context = canvas.getContext("2d");
-		const drawCircle = (notes) => drawCircleOfFifths(context, notes);  // TEMP POLYFILL
+		// TEMP POLYFILL
+		const getCanvasContext = (id) => document.getElementById(id).getContext("2d");
+		const _drawCircle = (notes) => drawCircleOfFifths(getCanvasContext("canvasCircleOfFiths"), notes);
+		const _drawPiano = (notes) => drawPiano(getCanvasContext("canvasPiano"), notes);
 
-
-		drawCircle();
+		_drawCircle();
+		_drawPiano();
 
 		// System Midi Input ---------------------------------------------------
 
 		function onMidiNoteChange(notes) {
-			console.log(notes, identify_chord(notes));
-			drawCircle(notes);
+			console.log(notes);
+			document.getElementById('chord').textContent = identify_chord(notes);
+			_drawCircle(notes);
+			_drawPiano(notes);
 		}
 
 		const notes = new Set();
