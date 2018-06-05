@@ -19,7 +19,9 @@
 	<h1>webMidiCircleOfFiths</h1>
 	<p><span id="chord"></span></p>
 	<canvas id="canvasCircleOfFiths" width="300" height="300"></canvas>
-	<canvas id="canvasPiano" width="300" height="100"></canvas>
+	<canvas id="canvasPiano" width="200" height="100"></canvas>
+	<canvas id="canvasGuitarFretboard" width="100" height="500"></canvas>
+
 
 	<script type="module">
 		import {
@@ -29,22 +31,23 @@
 		} from '../libs/es6/music.js'
 		import {drawCircleOfFifths,} from './canvasCircleOfFifths.js'
 		import {drawPiano,} from './canvasPiano.js'
+		import {drawGuitarFretboard,} from './canvasGuitarFretboard.js'
 
 		// TEMP POLYFILL
 		const getCanvasContext = (id) => document.getElementById(id).getContext("2d");
 		const _drawCircle = (notes) => drawCircleOfFifths(getCanvasContext("canvasCircleOfFiths"), notes);
 		const _drawPiano = (notes) => drawPiano(getCanvasContext("canvasPiano"), notes);
+		const _drawGuitar = (notes) => drawGuitarFretboard(getCanvasContext("canvasGuitarFretboard"), notes);
 
-		_drawCircle();
-		_drawPiano();
 
 		// System Midi Input ---------------------------------------------------
 
 		function onMidiNoteChange(notes) {
-			console.log(notes);
+			console.debug(notes);
 			document.getElementById('chord').textContent = identify_chord(notes);
 			_drawCircle(notes);
 			_drawPiano(notes);
+			_drawGuitar(notes);
 		}
 
 		const notes = new Set();
