@@ -2,6 +2,7 @@ import {
 	range,
 	assertEqualsObject,
 	previousValueIterator,
+	enumerate,
 } from '../libs/es6/core.js'
 
 import {
@@ -30,6 +31,8 @@ export function drawGuitarFretboard(context, notes, options={
 	fontFace: 'serif',
 	activeNoteColor: "#FF0000",
 	tuning: ['E', 'A', 'D', 'G', 'B', 'E'],
+	stringColor: '#CCCCCC',
+	number_of_frets: 21,
 }) {
 	context = context instanceof String ? document.getElementById(canvas).getContext("2d") : context;
 	console.assert(context instanceof CanvasRenderingContext2D, `Unable to draw on ${context}`);
@@ -44,18 +47,31 @@ export function drawGuitarFretboard(context, notes, options={
 	}
 	context.font = `${_options.lineWidth}px ${options.fontFace}`;
 	context.lineWidth = 1;  //_options.lineWidth
+	const FRET_HEIGHT = context.canvas.height / (options.number_of_frets + 1);  // +1 is for nut/border
 
 	// Background
 	context.setTransform(1,0,0,1,0,0); // Reset translations (why is there not a convenience call for this?)
 	context.clearRect(0, 0, context.canvas.width, context.canvas.height);
 
-	//console.log([...fretDistance()]);
+	// Strings
+	context.fillStyle = options.stringColor;
+	context.strokeStyle = context.fillStyle;
+	const STRING_WIDTH = context.canvas.width / options.tuning.length;
+	for (let [string_number, string_note_text] of enumerate(options.tuning)) {
+		const STRING_X = (string_number * STRING_WIDTH) + (STRING_WIDTH/2);
+		context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, FRET_HEIGHT/2);
+		context.beginPath();
+		context.moveTo(STRING_X, FRET_HEIGHT);
+		context.lineTo(STRING_X, context.canvas.height);
+		context.stroke();
+		context.closePath();
+	}
 
+	// Frets
 	context.fillStyle = "#000000";
 	context.strokeStyle = context.fillStyle;
-
-
-	for (let [fret_start, fret_end] of previousValueIterator(fretDistance(21, context.canvas.height))) {
+	//previousValueIterator(fretDistance(21, context.canvas.height))
+	for (let [fret_start, fret_end] of previousValueIterator(range(context.canvas.height - FRET_HEIGHT, FRET_HEIGHT, FRET_HEIGHT))) {
 		fret_start = fret_start ? fret_start : 0;
 
 		context.beginPath();
