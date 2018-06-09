@@ -81,7 +81,8 @@ export function drawGuitarFretboard(context, notes, options={
 			yield _options.tuning.map(note => note + fret_number).map(normalize_octave);
 		}
 	}
-	for (let [[fret_start, fret_end], notes_for_fret] of zip(
+	for (let [fret_number, [fret_start, fret_end], notes_for_fret] of zip(
+		range(options.number_of_frets),
 		previousValueIterator(range(context.canvas.height, FRET_HEIGHT, FRET_HEIGHT)),
 		notes_per_fret(),
 	)) {
@@ -93,7 +94,7 @@ export function drawGuitarFretboard(context, notes, options={
 		context.stroke();
 		context.closePath();
 
-		console.log(fret_start, fret_end, notes_for_fret);
+		//console.log(fret_number, fret_start, fret_end, notes_for_fret);
 		for (let [string_number, note] of enumerate(notes_for_fret)) {
 			const STRING_X = (string_number * STRING_WIDTH) + (STRING_WIDTH/2);
 			const note_active = notes.indexOf(note) >= 0;
@@ -102,7 +103,7 @@ export function drawGuitarFretboard(context, notes, options={
 			if (note_active || (!note_active && options.showPassiveNotes)) {
 				context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, fret_end);
 			}
-			console.log(string_number, string_note_text);
+			//console.log(string_number, string_note_text);
 		}
 	}
 }
