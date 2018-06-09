@@ -33,6 +33,8 @@ export function drawGuitarFretboard(context, notes, options={
 	lineWidth: 0.03,
 	fontFace: 'serif',
 	activeNoteColor: "#FF0000",
+	passiveNoteColor: "#CCCCCC",
+	showPassiveNotes: true,
 	tuning: ['E', 'A', 'D', 'G', 'B', 'E'],
 	stringColor: '#CCCCCC',
 	number_of_frets: 21,
@@ -62,7 +64,7 @@ export function drawGuitarFretboard(context, notes, options={
 	const STRING_WIDTH = context.canvas.width / options.tuning.length;
 	for (let [string_number, string_note_text] of enumerate(options.tuning)) {
 		const STRING_X = (string_number * STRING_WIDTH) + (STRING_WIDTH/2);
-		context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, FRET_HEIGHT/2);
+		//context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, FRET_HEIGHT/2);
 		context.beginPath();
 		context.moveTo(STRING_X, FRET_HEIGHT);
 		context.lineTo(STRING_X, context.canvas.height);
@@ -76,15 +78,11 @@ export function drawGuitarFretboard(context, notes, options={
 	//previousValueIterator(fretDistance(21, context.canvas.height))
 	function* notes_per_fret() {
 		for (let fret_number of range(options.number_of_frets)) {
-			yield _options.tuning.map(
-				note => note + fret_number
-			).map(
-				note => note_to_text(note, {format:'%NOTE_LETTER_WITH_SHARP%'})
-			);
+			yield _options.tuning.map(note => note + fret_number).map(normalize_octave);
 		}
 	}
 	for (let [[fret_start, fret_end], notes_for_fret] of zip(
-		previousValueIterator(range(context.canvas.height - FRET_HEIGHT, FRET_HEIGHT, FRET_HEIGHT)),
+		previousValueIterator(range(context.canvas.height, FRET_HEIGHT, FRET_HEIGHT)),
 		notes_per_fret(),
 	)) {
 		fret_start = fret_start ? fret_start : 0;
@@ -96,10 +94,15 @@ export function drawGuitarFretboard(context, notes, options={
 		context.closePath();
 
 		console.log(fret_start, fret_end, notes_for_fret);
-		for (let [string_number, string_note_text] of enumerate(notes_for_fret)) {
-			console.log(string_number, string_note_text);
+		for (let [string_number, note] of enumerate(notes_for_fret)) {
 			const STRING_X = (string_number * STRING_WIDTH) + (STRING_WIDTH/2);
-			context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, fret_start);
+			const note_active = notes.indexOf(note) >= 0;
+			const string_note_text = note_to_text(note, {format:'%NOTE_LETTER_WITH_SHARP%'});
+			context.fillStyle = note_active ? options.activeNoteColor : options.passiveNoteColor;
+			if (note_active || (!note_active && options.showPassiveNotes)) {
+				context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, fret_end);
+			}
+			console.log(string_number, string_note_text);
 		}
 	}
 }
