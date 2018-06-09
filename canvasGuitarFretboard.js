@@ -3,12 +3,15 @@ import {
 	assertEqualsObject,
 	previousValueIterator,
 	enumerate,
+	chain,
+	zip,
 } from '../libs/es6/core.js'
 
 import {
 	NUM_NOTES_IN_OCTAVE,
 	normalize_octave,
 	text_to_note,
+	note_to_text,
 } from '../libs/es6/music.js'
 
 
@@ -71,7 +74,19 @@ export function drawGuitarFretboard(context, notes, options={
 	context.fillStyle = "#000000";
 	context.strokeStyle = context.fillStyle;
 	//previousValueIterator(fretDistance(21, context.canvas.height))
-	for (let [fret_start, fret_end] of previousValueIterator(range(context.canvas.height - FRET_HEIGHT, FRET_HEIGHT, FRET_HEIGHT))) {
+	function* notes_per_fret() {
+		for (let fret_number of range(options.number_of_frets)) {
+			yield _options.tuning.map(
+				note => note + fret_number
+			).map(
+				note => note_to_text(note, {format:'%NOTE_LETTER_WITH_SHARP%'})
+			);
+		}
+	}
+	for (let [[fret_start, fret_end], notes_for_fret] of zip(
+		previousValueIterator(range(context.canvas.height - FRET_HEIGHT, FRET_HEIGHT, FRET_HEIGHT)),
+		notes_per_fret(),
+	)) {
 		fret_start = fret_start ? fret_start : 0;
 
 		context.beginPath();
@@ -80,7 +95,12 @@ export function drawGuitarFretboard(context, notes, options={
 		context.stroke();
 		context.closePath();
 
-		//console.log(fret_start, fret_end);
+		console.log(fret_start, fret_end, notes_for_fret);
+		for (let [string_number, string_note_text] of enumerate(notes_for_fret)) {
+			console.log(string_number, string_note_text);
+			const STRING_X = (string_number * STRING_WIDTH) + (STRING_WIDTH/2);
+			context.fillText(string_note_text, STRING_X - context.measureText(string_note_text).width/2, fret_start);
+		}
 	}
 }
 
