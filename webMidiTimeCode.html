@@ -12,5 +12,21 @@
 	<p>Generate MTC timecodes</p>
 
 	<script type="module">
+
+		const worker = new Worker("midiTimeCode.js", {type: "module"});
+
+		// System Midi Input ---------------------------------------------------
+
+		function bindMidiDevices(midiAccess) {
+			const midiOutputs = [...midiAccess.outputs.values()];
+			worker.postMessage({message: 'init', midiOutputs: midiOutputs}, midiOutputs);
+		};
+		function initMidi(bindMidiDevices) {
+			if (window.navigator.requestMIDIAccess) {
+				window.navigator.requestMIDIAccess({sysex: false}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
+			} else {console.warn("No browser MIDI support");}
+		};
+		initMidi(bindMidiDevices);
+
 	</script>
 </body>

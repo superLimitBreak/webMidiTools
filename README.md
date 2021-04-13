@@ -20,5 +20,7 @@ Real time visualize/identify chords from Midi input.
 Permissions
 -----------
 
-* [chrome://flags/#unsafely-treat-insecure-origin-as-secure](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
-    * Add localhost
+* [Feature: Deprecate insecure Web MIDI use](https://www.chromestatus.com/feature/5138066234671104)
+    * Phase 1: Stop exposing Web MIDI API to insecure origins from Chrome 77
+    * [chrome://flags/#unsafely-treat-insecure-origin-as-secure](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
+        * Add `localhost`

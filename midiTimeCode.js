@@ -1,4 +1,12 @@
-console.log("hello");
+let midiOutputs;
+
+
+onmessage = function(event) {  // This function must be defined like this ... don't ask questions
+	if (event.data.message == 'init') {
+		midiOutputs = event.data.midiOutputs;
+		console.log("init with %d midi devices", midiOutputs.length);
+	}
+}
 
 /*
 
