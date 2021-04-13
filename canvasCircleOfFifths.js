@@ -3,7 +3,7 @@ import {
 	normalize_octave,
 	circle_of_fifths_notes,
 	circle_of_fifths_text
-} from '../libs/es6/music.js'
+} from './music.js'
 
 
 const TEMP_circle_of_fifths_notes = [...circle_of_fifths_notes()];

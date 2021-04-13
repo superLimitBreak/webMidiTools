@@ -15,3 +15,10 @@ webMidiCircleOfFifths
 
 Visualization of Circle of Fifths.
 Real time visualize/identify chords from Midi input.
+
+
+Permissions
+-----------
+
+* [chrome://flags/#unsafely-treat-insecure-origin-as-secure](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
+    * Add localhost

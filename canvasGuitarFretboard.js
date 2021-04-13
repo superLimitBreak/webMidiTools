@@ -5,14 +5,14 @@ import {
 	enumerate,
 	chain,
 	zip,
-} from '../libs/es6/core.js'
+} from './core.js'
 
 import {
 	NUM_NOTES_IN_OCTAVE,
 	normalize_octave,
 	text_to_note,
 	note_to_text,
-} from '../libs/es6/music.js'
+} from './music.js'
 
 
 function* fretDistance(frets=21, scale_length=648) {

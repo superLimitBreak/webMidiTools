@@ -1,12 +1,12 @@
 import {
 	enumerate, zip,
-} from '../libs/es6/core.js'
+} from './core.js'
 
 import {
 	NUM_NOTES_IN_OCTAVE,
 	normalize_octave,
 	text_to_note,
-} from '../libs/es6/music.js'
+} from './music.js'
 
 
 const WHITE_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(text_to_note).map(normalize_octave);
