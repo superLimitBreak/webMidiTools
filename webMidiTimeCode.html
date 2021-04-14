@@ -10,16 +10,31 @@
 <body>
 	<h1>webMidiTimeCode</h1>
 	<p>Generate MTC timecodes</p>
+	<button id="button_play">play</button>
+	<button id="button_seek_10">seek 10</button>
+	<button id="button_seek_20">seek 20</button>
 
 	<script type="module">
 
-		const worker = new Worker("midiTimeCode.js", {type: "module"});
+		const MTCWorker = new Worker("midiTimeCode.js", {type: "module"});
+
+		MTCWorker.onmessage = function(event) {
+			const message = event.data.message;
+			if (message == 'playing') {
+				console.log(event.data.timecode_components);
+			}
+		}
+
+		document.getElementById("button_play").addEventListener('click', ()=>MTCWorker.postMessage({message: 'play'}));
+		document.getElementById("button_seek_10").addEventListener('click', ()=>MTCWorker.postMessage({message: 'seek', timestamp: 10 * 1000}));
+		document.getElementById("button_seek_20").addEventListener('click', ()=>MTCWorker.postMessage({message: 'seek', timestamp: 20 * 1000}));
+
 
 		// System Midi Input ---------------------------------------------------
 
 		function bindMidiDevices(midiAccess) {
 			const midiOutputs = [...midiAccess.outputs.values()];
-			worker.postMessage({message: 'init', midiOutputs: midiOutputs}, midiOutputs);
+			MTCWorker.postMessage({message: 'init', midiOutputs: midiOutputs}, midiOutputs);
 		};
 		function initMidi(bindMidiDevices) {
 			if (window.navigator.requestMIDIAccess) {

@@ -6,12 +6,36 @@ import {
 let midiOutputs;
 
 
-onmessage = function(event) {  // This function must be defined like this ... don't ask questions
-	if (event.data.message == 'init') {
+// https://stackoverflow.com/questions/33289726/combination-of-async-function-await-settimeout
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+// await sleep(1000);
+
+// -----------------------------------------------------------------------------
+
+self.addEventListener('message', (event)=>{  // This function must be defined like this ... don't ask questions
+	const message = event.data.message;
+	if (message == 'init') {
 		midiOutputs = event.data.midiOutputs;
 		console.log("init with %d midi devices", midiOutputs.length);
+		if (midiOutputs.length == 0) {
+			midiOutputs = [{send:(data)=>{console.log("midiOutput.send", data)}}];
+		}
+	} else 
+	if (message == 'seek') {
+		console.log('seek', event.data.timestamp);
+		seek(event.data.timestamp);
+	} else
+	if (message == 'play') {
+		console.log('play', event.data.timestamp);
+		play(event.data.timestamp);
 	}
-}
+
+
+});
+
+//------------------------------------------------------------------------------
 
 const milliseconds_in_second = 1000;
 const milliseconds_in_minuet = 60 * milliseconds_in_second;
@@ -25,16 +49,18 @@ const MTCFullRateLookup = {
 };
 function timecode_to_components(timecode_milliseconds, {fps=30}) {
 	return {
-		ff: Math.floor(((timecode_milliseconds % milliseconds_in_second)/milliseconds_in_second)*fps),
-		ss: Math.floor(((timecode_milliseconds % milliseconds_in_minuet)/milliseconds_in_second)),
-		mm: Math.floor(((timecode_milliseconds % milliseconds_in_hour)/milliseconds_in_minuet)),
-		hh: Math.floor(((timecode_milliseconds % milliseconds_in_day)/milliseconds_in_hour)),
+		timecode_milliseconds: timecode_milliseconds,
+		fps: fps,
+		frame: Math.floor(((timecode_milliseconds % milliseconds_in_second)/milliseconds_in_second)*fps),
+		seconds: Math.floor(((timecode_milliseconds % milliseconds_in_minuet)/milliseconds_in_second)),
+		minuets: Math.floor(((timecode_milliseconds % milliseconds_in_hour)/milliseconds_in_minuet)),
+		hours: Math.floor(((timecode_milliseconds % milliseconds_in_day)/milliseconds_in_hour)),
 	};
 }
 function MTCFull(timecode_milliseconds, {fps=30}) {
-	const rr = MTCFullRateLookup[fps] * 0b100000;
-	const {hh, mm, ss, ff} = timecode_to_components(timecode_milliseconds, {fps});
-	return [0xF0, 0x7F, 0x7F, 0x01, 0x01, rr+hh, mm, ss, ff, 0xF7]
+	const rate = MTCFullRateLookup[fps] * 0b100000;
+	const {hours, minuets, seconds, frame} = timecode_to_components(timecode_milliseconds, {fps});
+	return [0xF0, 0x7F, 0x7F, 0x01, 0x01, rate+hours, minuets, seconds, frame, 0xF7]
 }
 
 
@@ -42,23 +68,23 @@ function MTCQuarter(timecode_milliseconds, {fps=30}) {
 	const lower_4_bits = 0b00001111;
 	const upper_2_bits = 0b00110000;
 	function _piece(i, nibble) {
-		console.assert(nibble <= lower_4_bits);
-		console.assert(i <= 8);
+		//console.assert(nibble <= lower_4_bits);
+		//console.assert(i <= 8);
 		return (i * 0b10000) + nibble;
 	}
 
-	const rr = MTCFullRateLookup[fps] * 0b10;
-	const {hh, mm, ss, ff} = timecode_to_components(timecode_milliseconds, {fps});
+	const rate = MTCFullRateLookup[fps] * 0b10;
+	const {hours, minuets, seconds, frame} = timecode_to_components(timecode_milliseconds, {fps});
 	return [
-		_piece(0, (ff & lower_4_bits)),
-		_piece(1, (ff & upper_2_bits) >> 4),
-		_piece(2, (ss & lower_4_bits)),
-		_piece(3, (ss & upper_2_bits) >> 4),
-		_piece(4, (mm & lower_4_bits)),
-		_piece(5, (mm & upper_2_bits) >> 4),
-		_piece(6, (hh & lower_4_bits)),
-		_piece(7, (hh & upper_2_bits) >> 4) + rr,
-	]
+		_piece(0, (frame & lower_4_bits)),
+		_piece(1, (frame & upper_2_bits) >> 4),
+		_piece(2, (seconds & lower_4_bits)),
+		_piece(3, (seconds & upper_2_bits) >> 4),
+		_piece(4, (minuets & lower_4_bits)),
+		_piece(5, (minuets & upper_2_bits) >> 4),
+		_piece(6, (hours & lower_4_bits)),
+		_piece(7, (hours & upper_2_bits) >> 4) + rate,
+	];
 }
 
 // Tests -----------------------------------------------------------------------
@@ -80,6 +106,43 @@ assertEquals([
 	[_to_hex_string(MTCQuarter(100,{fps:30})), '03 10 20 30 40 50 60 76'.replaceAll(' ','')],
 	[_to_hex_string(MTCQuarter(20100,{fps:30})), '03 10 24 31 40 50 60 76'.replaceAll(' ','')],
 ]);
+
+// -----------------------------------------------------------------------------
+
+
+
+function sendMidi(data) {
+	for (let midiOutput of midiOutputs) {
+		midiOutput.send(data);
+	}
+}
+
+let playing = false;
+let timestamp;
+const quarter_frame_messages = [];
+
+async function play(timestamp_begin, fps=30) {
+	const frame_milliseconds = (1/fps) * milliseconds_in_second;
+	timestamp_begin = performance.now() - (timestamp_begin || 0);
+	playing = true;
+	while (playing) {
+		if (quarter_frame_messages.length == 0) {
+			const _timestamp = performance.now() - timestamp_begin;
+			quarter_frame_messages.push(...MTCQuarter(_timestamp, {fps}));
+			postMessage({
+				message: 'playing',
+				timecode_components: timecode_to_components(_timestamp, {fps}),
+			});
+		}
+		sendMidi([0xF1, quarter_frame_messages.shift()]);
+		await sleep(frame_milliseconds);
+		if (quarter_frame_messages.length==0) {return;}
+	}
+}
+
+function seek(timestamp, fps=30) {
+	sendMidi(MTCFull(timestamp, {fps}));
+}
 
 
 
