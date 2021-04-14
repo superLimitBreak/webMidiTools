@@ -18,24 +18,47 @@ const milliseconds_in_minuet = 60 * milliseconds_in_second;
 const milliseconds_in_hour = 60 * milliseconds_in_minuet;
 const milliseconds_in_day = 24 * milliseconds_in_hour;
 const MTCFullRateLookup = {
-	24: 0b00000000,
-	25: 0b00100000,
-	29.97: 0b01000000,
-	30: 0b01100000,
+	24: 0b00,
+	25: 0b01,
+	29.97: 0b10,
+	30: 0b11,
 };
+function timecode_to_components(timecode_milliseconds, {fps=30}) {
+	return {
+		ff: Math.floor(((timecode_milliseconds % milliseconds_in_second)/milliseconds_in_second)*fps),
+		ss: Math.floor(((timecode_milliseconds % milliseconds_in_minuet)/milliseconds_in_second)),
+		mm: Math.floor(((timecode_milliseconds % milliseconds_in_hour)/milliseconds_in_minuet)),
+		hh: Math.floor(((timecode_milliseconds % milliseconds_in_day)/milliseconds_in_hour)),
+	};
+}
 function MTCFull(timecode_milliseconds, {fps=30}) {
-	const rr = MTCFullRateLookup[fps];
-	const ff = Math.floor(((timecode_milliseconds % milliseconds_in_second)/milliseconds_in_second)*fps);
-	const ss = Math.floor(((timecode_milliseconds % milliseconds_in_minuet)/milliseconds_in_second));
-	const mm = Math.floor(((timecode_milliseconds % milliseconds_in_hour)/milliseconds_in_minuet));
-	const hh = Math.floor(((timecode_milliseconds % milliseconds_in_day)/milliseconds_in_hour));
-	const aa = [0xF0, 0x7F, 0x7F, 0x01, 0x01, rr+hh, mm, ss, ff, 0xF7]
-	console.log(rr,ff,ss,mm,hh, aa);
-	return aa;
+	const rr = MTCFullRateLookup[fps] * 0b100000;
+	const {hh, mm, ss, ff} = timecode_to_components(timecode_milliseconds, {fps});
+	return [0xF0, 0x7F, 0x7F, 0x01, 0x01, rr+hh, mm, ss, ff, 0xF7]
 }
 
-function MTCQuarter(timecode_milliseconds, fps=30) {
 
+function MTCQuarter(timecode_milliseconds, {fps=30}) {
+	const lower_4_bits = 0b00001111;
+	const upper_2_bits = 0b00110000;
+	function _piece(i, nibble) {
+		console.assert(nibble <= lower_4_bits);
+		console.assert(i <= 8);
+		return (i * 0b10000) + nibble;
+	}
+
+	const rr = MTCFullRateLookup[fps] * 0b10;
+	const {hh, mm, ss, ff} = timecode_to_components(timecode_milliseconds, {fps});
+	return [
+		_piece(0, (ff & lower_4_bits)),
+		_piece(1, (ff & upper_2_bits) >> 4),
+		_piece(2, (ss & lower_4_bits)),
+		_piece(3, (ss & upper_2_bits) >> 4),
+		_piece(4, (mm & lower_4_bits)),
+		_piece(5, (mm & upper_2_bits) >> 4),
+		_piece(6, (hh & lower_4_bits)),
+		_piece(7, (hh & upper_2_bits) >> 4) + rr,
+	]
 }
 
 // Tests -----------------------------------------------------------------------
@@ -44,12 +67,20 @@ const MTCFullHexTemplate = 'f07f7f0101hhmmssfff7';
 assertEquals([
 	[_to_hex_string(MTCFull(0,{fps:24})), MTCFullHexTemplate.replace('hhmmssff', '00000000')],
 	[_to_hex_string(MTCFull(0,{fps:30})), MTCFullHexTemplate.replace('hhmmssff', '60000000')],
+	[_to_hex_string(MTCFull(100,{fps:24})), MTCFullHexTemplate.replace('hhmmssff', '00000002')],
 	[_to_hex_string(MTCFull(100,{fps:30})), MTCFullHexTemplate.replace('hhmmssff', '60000003')],
 	[_to_hex_string(MTCFull(20000,{fps:30})), MTCFullHexTemplate.replace('hhmmssff', '60001400')],
 	[_to_hex_string(MTCFull(20100,{fps:30})), MTCFullHexTemplate.replace('hhmmssff', '60001403')],
 	[_to_hex_string(MTCFull(320100,{fps:30})), MTCFullHexTemplate.replace('hhmmssff', '60051403')],
 	[_to_hex_string(MTCFull(320100+milliseconds_in_hour,{fps:30})), MTCFullHexTemplate.replace('hhmmssff', '61051403')],
 ]);
+assertEquals([
+	[_to_hex_string(MTCQuarter(0,{fps:24})), '00 10 20 30 40 50 60 70'.replaceAll(' ','')],
+	[_to_hex_string(MTCQuarter(100,{fps:24})), '02 10 20 30 40 50 60 70'.replaceAll(' ','')],
+	[_to_hex_string(MTCQuarter(100,{fps:30})), '03 10 20 30 40 50 60 76'.replaceAll(' ','')],
+	[_to_hex_string(MTCQuarter(20100,{fps:30})), '03 10 24 31 40 50 60 76'.replaceAll(' ','')],
+]);
+
 
 
 
