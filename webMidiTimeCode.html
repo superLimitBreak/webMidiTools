@@ -17,12 +17,19 @@
 
 	<script type="module">
 
-		const MTCWorker = new Worker("midiTimeCode.js", {type: "module"});
+		const fakeMidiOutputDevice = {send:(data)=>{console.log("midiOutput.send", data);}};
+		const midiOutputs = [];
 
+		const MTCWorker = new Worker("midiTimeCode.js", {type: "module"});
 		MTCWorker.onmessage = function(event) {
 			const message = event.data.message;
+			if (message == 'sendMidi') {
+				for (let midiOutput of midiOutputs) {
+					midiOutput.send(event.data.data);
+				}
+			}
 			if (message == 'playing') {
-				console.log(event.data.timecode_components);
+				//console.log(event.data.timecode_components);
 			}
 		}
 
@@ -35,12 +42,16 @@
 		// System Midi Input ---------------------------------------------------
 
 		function bindMidiDevices(midiAccess) {
-			const midiOutputs = [...midiAccess.outputs.values()];
-			MTCWorker.postMessage({message: 'init', midiOutputs: midiOutputs}, midiOutputs);
+			midiOutputs.push(...midiAccess.outputs.values());
+			//MTCWorker.postMessage({message: 'init', midiOutputs: midiOutputs}, midiOutputs);
+			if (midiOutputs.length == 0) {
+				midiOutputs.push(fakeMidiOutputDevice);
+			}
 		};
 		function initMidi(bindMidiDevices) {
 			if (window.navigator.requestMIDIAccess) {
-				window.navigator.requestMIDIAccess({sysex: false}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
+				window.navigator.requestMIDIAccess({sysex: true})
+				.then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
 			} else {console.warn("No browser MIDI support");}
 		};
 		initMidi(bindMidiDevices);
