@@ -1,7 +1,9 @@
 // https://en.wikipedia.org/wiki/MIDI_timecode
 import {
 	assertEquals,
+	assertEqualsObject,
 } from './core.js'
+//import timecode from './timecode.js';
 
 let midiOutputs;
 
@@ -31,6 +33,10 @@ self.addEventListener('message', (event)=>{  // This function must be defined li
 		console.log('play', event.data.timestamp);
 		play(event.data.timestamp);
 	}
+	if (message == 'stop') {
+		console.log('stop');
+		playing = false;
+	}
 
 
 });
@@ -47,24 +53,43 @@ const MTCFullRateLookup = {
 	29.97: 0b10,
 	30: 0b11,
 };
+
 function timecode_to_components(timecode_milliseconds, {fps=30}) {
+	const milliseconds_per_frame = (1/fps) * milliseconds_in_second;
+	const absolute_frame = Math.floor(timecode_milliseconds / milliseconds_per_frame);
+	const milliseconds_per_quarter_frame = milliseconds_per_frame / 4;
+	const absolute_quarter_frame = Math.floor(timecode_milliseconds / milliseconds_per_quarter_frame);
+	const timecode_milliseconds_next_frame = (absolute_frame+1) * milliseconds_per_frame;
+	const timecode_milliseconds_next_quarter_frame = (absolute_quarter_frame+1) * milliseconds_per_quarter_frame;
 	return {
 		timecode_milliseconds: timecode_milliseconds,
 		fps: fps,
+		milliseconds_per_frame,
+		milliseconds_per_quarter_frame,
+		absolute_frame,
+		absolute_quarter_frame,
+		timecode_milliseconds_next_frame,
+		timecode_milliseconds_next_quarter_frame,
+		sleep_to_frame: timecode_milliseconds_next_frame - timecode_milliseconds,
+		sleep_to_quarter_frame: timecode_milliseconds_next_quarter_frame - timecode_milliseconds,
 		frame: Math.floor(((timecode_milliseconds % milliseconds_in_second)/milliseconds_in_second)*fps),
 		seconds: Math.floor(((timecode_milliseconds % milliseconds_in_minuet)/milliseconds_in_second)),
 		minuets: Math.floor(((timecode_milliseconds % milliseconds_in_hour)/milliseconds_in_minuet)),
 		hours: Math.floor(((timecode_milliseconds % milliseconds_in_day)/milliseconds_in_hour)),
 	};
 }
-function MTCFull(timecode_milliseconds, {fps=30}) {
+
+
+function MTCFull(timecode, {fps=30}) {
 	const rate = MTCFullRateLookup[fps] * 0b100000;
-	const {hours, minuets, seconds, frame} = timecode_to_components(timecode_milliseconds, {fps});
+	if (typeof(timecode)=="number") {
+		timecode = timecode_to_components(timecode, {fps});
+	}
+	const {hours, minuets, seconds, frame} = timecode;
 	return [0xF0, 0x7F, 0x7F, 0x01, 0x01, rate+hours, minuets, seconds, frame, 0xF7]
 }
 
-
-function MTCQuarter(timecode_milliseconds, {fps=30}) {
+function MTCQuarter(timecode, {fps=30}) {
 	const lower_4_bits = 0b00001111;
 	const upper_2_bits = 0b00110000;
 	function _piece(i, nibble) {
@@ -74,7 +99,10 @@ function MTCQuarter(timecode_milliseconds, {fps=30}) {
 	}
 
 	const rate = MTCFullRateLookup[fps] * 0b10;
-	const {hours, minuets, seconds, frame} = timecode_to_components(timecode_milliseconds, {fps});
+	if (typeof(timecode)=="number") {
+		timecode = timecode_to_components(timecode, {fps});
+	}
+	const {hours, minuets, seconds, frame} = timecode;
 	return [
 		_piece(0, (frame & lower_4_bits)),
 		_piece(1, (frame & upper_2_bits) >> 4),
@@ -88,6 +116,27 @@ function MTCQuarter(timecode_milliseconds, {fps=30}) {
 }
 
 // Tests -----------------------------------------------------------------------
+
+// 320100 -> 5min 20seconds frame3(at30fps)
+assertEqualsObject([
+	[timecode_to_components(320100,{fps:30}), {
+		"timecode_milliseconds": 320100,
+		"fps": 30,
+		"milliseconds_per_frame": 33.333333333333336,
+		"milliseconds_per_quarter_frame": 8.333333333333334,
+		"absolute_frame": 9603,
+		"absolute_quarter_frame": 38412,
+		"timecode_milliseconds_next_frame": 320133.3333333334,
+		"timecode_milliseconds_next_quarter_frame": 320108.3333333334,
+		"sleep_to_frame": 33.33333333337214,
+		"sleep_to_quarter_frame": 8.333333333372138,
+		"frame": 3,
+		"seconds": 20,
+		"minuets": 5,
+		"hours": 0
+	}],
+]);
+
 function _to_hex_string(bytes) {return bytes.map(x=>x.toString(16).padStart(2,'0')).join('');}
 const MTCFullHexTemplate = 'f07f7f0101hhmmssfff7';
 assertEquals([
@@ -117,26 +166,36 @@ function sendMidi(data) {
 	}
 }
 
+
 let playing = false;
-let timestamp;
+let absolute_quarter_frame;
 const quarter_frame_messages = [];
 
-async function play(timestamp_begin, fps=30) {
-	const frame_milliseconds = (1/fps) * milliseconds_in_second;
-	timestamp_begin = performance.now() - (timestamp_begin || 0);
+async function play(timestamp_offset, fps=30) {
+	timestamp_offset = (timestamp_offset || 0);
+	const timestamp_begin = performance.now() - timestamp_offset;
 	playing = true;
+	absolute_quarter_frame = timecode_to_components(timestamp_offset, {fps}).absolute_quarter_frame;
+	quarter_frame_messages.length=0;
 	while (playing) {
-		if (quarter_frame_messages.length == 0) {
-			const _timestamp = performance.now() - timestamp_begin;
-			quarter_frame_messages.push(...MTCQuarter(_timestamp, {fps}));
-			postMessage({
-				message: 'playing',
-				timecode_components: timecode_to_components(_timestamp, {fps}),
-			});
+		const timecode_milliseconds = performance.now() - timestamp_begin;
+		let timecode_components = timecode_to_components(timecode_milliseconds, {fps});
+
+		function get_next_quarter_frame_message() {
+			if (quarter_frame_messages.length == 0) {
+				quarter_frame_messages.push(...MTCQuarter(timecode_to_components, {fps}));
+				postMessage({message: 'playing', timecode_components: timecode_components});
+			}
+			return quarter_frame_messages.shift();
 		}
-		sendMidi([0xF1, quarter_frame_messages.shift()]);
-		await sleep(frame_milliseconds);
-		if (quarter_frame_messages.length==0) {return;}
+
+		let quarter_frames_sent;
+		for (quarter_frames_sent=0 ; quarter_frames_sent < timecode_components.absolute_quarter_frame - absolute_quarter_frame ; quarter_frames_sent++) {
+			sendMidi([0xF1, get_next_quarter_frame_message()]);
+		}
+		absolute_quarter_frame += quarter_frames_sent;
+		
+		await sleep(timecode_components.sleep_to_quarter_frame);
 	}
 }
 
