@@ -27,6 +27,7 @@
 				for (let midiOutput of midiOutputs) {
 					midiOutput.send(event.data.data);
 				}
+				//console.log(event.data.data);
 			}
 			if (message == 'playing') {
 				//console.log(event.data.timecode_components);

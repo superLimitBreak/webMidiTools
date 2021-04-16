@@ -52,14 +52,14 @@ const MTCFullRateLookup = {
 
 function timecode_to_components(timecode_milliseconds, {fps=30}) {
 	const milliseconds_per_frame = (1/fps) * milliseconds_in_second;
-	const absolute_frame = Math.floor(timecode_milliseconds / milliseconds_per_frame);
 	const milliseconds_per_quarter_frame = milliseconds_per_frame / 4;
+	const absolute_frame = Math.floor(timecode_milliseconds / milliseconds_per_frame);
 	const absolute_quarter_frame = Math.floor(timecode_milliseconds / milliseconds_per_quarter_frame);
 	const timecode_milliseconds_next_frame = (absolute_frame+1) * milliseconds_per_frame;
 	const timecode_milliseconds_next_quarter_frame = (absolute_quarter_frame+1) * milliseconds_per_quarter_frame;
 	return {
-		timecode_milliseconds: timecode_milliseconds,
-		fps: fps,
+		timecode_milliseconds,
+		fps,
 		milliseconds_per_frame,
 		milliseconds_per_quarter_frame,
 		absolute_frame,
@@ -77,37 +77,37 @@ function timecode_to_components(timecode_milliseconds, {fps=30}) {
 
 
 function MTCFull(timecode, {fps=30}) {
-	const rate = MTCFullRateLookup[fps] * 0b100000;
+	const rate = (MTCFullRateLookup[fps] || 0) * 0b100000;
 	if (typeof(timecode)=="number") {
 		timecode = timecode_to_components(timecode, {fps});
 	}
 	const {hours, minuets, seconds, frame} = timecode;
-	return [0xF0, 0x7F, 0x7F, 0x01, 0x01, rate+hours, minuets, seconds, frame, 0xF7]
+	return [0xF0, 0x7F, 0x7F, 0x01, 0x01, rate+hours, minuets, seconds, frame, 0xF7];
 }
 
 function MTCQuarter(timecode, {fps=30}) {
 	const lower_4_bits = 0b00001111;
-	const upper_2_bits = 0b00110000;
+	const upper_4_bits = 0b11110000;
 	function _piece(i, nibble) {
 		//console.assert(nibble <= lower_4_bits);
 		//console.assert(i <= 8);
 		return (i * 0b10000) + nibble;
 	}
 
-	const rate = MTCFullRateLookup[fps] * 0b10;
+	const rate = (MTCFullRateLookup[fps] || 0) * 0b10;
 	if (typeof(timecode)=="number") {
 		timecode = timecode_to_components(timecode, {fps});
 	}
 	const {hours, minuets, seconds, frame} = timecode;
 	return [
-		_piece(0, swapEndianness(4,   frame & lower_4_bits)     ),
-		_piece(1, swapEndianness(2,   (frame & upper_2_bits) >> 4)),
-		_piece(2, swapEndianness(4, seconds & lower_4_bits)     ),
-		_piece(3, swapEndianness(2, (seconds & upper_2_bits) >> 4)),
-		_piece(4, swapEndianness(4, minuets & lower_4_bits)     ),
-		_piece(5, swapEndianness(2, (minuets & upper_2_bits) >> 4)),
-		_piece(6, swapEndianness(4,   hours & lower_4_bits)     ),
-		_piece(7, (hours & upper_2_bits) >> 4) + rate,
+		_piece(0, frame & lower_4_bits     ),
+		_piece(1, (frame & upper_4_bits) >> 4),
+		_piece(2, seconds & lower_4_bits     ),
+		_piece(3, (seconds & upper_4_bits) >> 4),
+		_piece(4, minuets & lower_4_bits     ),
+		_piece(5, (minuets & upper_4_bits) >> 4),
+		_piece(6, hours & lower_4_bits     ),
+		_piece(7, (hours & upper_4_bits) >> 4) + rate,
 	];
 }
 
@@ -147,9 +147,9 @@ assertEquals([
 ]);
 assertEquals([
 	[_to_hex_string(MTCQuarter(0,{fps:24})), '00 10 20 30 40 50 60 70'.replaceAll(' ','')],
-	//[_to_hex_string(MTCQuarter(100,{fps:24})), '02 10 20 30 40 50 60 70'.replaceAll(' ','')],
-	//[_to_hex_string(MTCQuarter(100,{fps:30})), '03 10 20 30 40 50 60 76'.replaceAll(' ','')],
-	//[_to_hex_string(MTCQuarter(20100,{fps:30})), '03 10 24 31 40 50 60 76'.replaceAll(' ','')],
+	[_to_hex_string(MTCQuarter(100,{fps:24})), '02 10 20 30 40 50 60 70'.replaceAll(' ','')],
+	[_to_hex_string(MTCQuarter(100,{fps:30})), '03 10 20 30 40 50 60 76'.replaceAll(' ','')],
+	[_to_hex_string(MTCQuarter(20100,{fps:30})), '03 10 24 31 40 50 60 76'.replaceAll(' ','')],
 ]);
 
 // -----------------------------------------------------------------------------
@@ -177,8 +177,8 @@ async function play(timestamp_offset, fps=30) {
 
 		function get_next_quarter_frame_message() {
 			if (quarter_frame_messages.length == 0) {
-				quarter_frame_messages.push(...MTCQuarter(timecode_to_components, {fps}));
-				postMessage({message: 'playing', timecode_components: timecode_components});
+				quarter_frame_messages.push(...MTCQuarter(timecode_components, {fps}));
+				postMessage({message: 'playing', timecode_components});
 			}
 			return quarter_frame_messages.shift();
 		}

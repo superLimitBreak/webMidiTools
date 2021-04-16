@@ -57,6 +57,7 @@
 		function onMidiMessage(midiDevice, msg) {
 			const midiMsg = normalize_javascript_midi_msg(msg);
 			console.info(midiDevice.name, JSON.stringify(midiMsg));
+			//console.info(midiDevice.name, msg.data);
 		};
 
 		function bindMidiDevices(midiAccess) {
@@ -66,7 +67,7 @@
 		};
 		function initMidi(bindMidiDevices) {
 			if (window.navigator.requestMIDIAccess) {
-				window.navigator.requestMIDIAccess({sysex: false}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
+				window.navigator.requestMIDIAccess({sysex: true}).then(bindMidiDevices, function() {console.warn('MIDI Access Failed');});
 			} else {console.warn("No browser MIDI support");}
 		};
 		initMidi(bindMidiDevices);
