@@ -56,12 +56,14 @@
 
 		function onMidiMessage(midiDevice, msg) {
 			const midiMsg = normalize_javascript_midi_msg(msg);
+			// TODO: GUI option to select type of debug message?
 			console.info(midiDevice.name, JSON.stringify(midiMsg));
 			//console.info(midiDevice.name, msg.data);
 		};
 
 		function bindMidiDevices(midiAccess) {
 			for (let midiDevice of midiAccess.inputs.values()) {
+				console.log(midiDevice);
 				midiDevice.onmidimessage = (msg) => onMidiMessage(midiDevice, msg);
 			}
 		};
