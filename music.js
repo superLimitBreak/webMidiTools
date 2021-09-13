@@ -108,6 +108,7 @@ assertEquals([
 
 
 // http://jjensen.org/CircleOf5thsFun.html
+// TODO: https://jpreston.xyz/a-catalogue-of-chords-example.html
 const CHORD_NAMES_RELATIVE_TO_C = buildMapFromObject({
     'major': ['C', 'E', 'G'],
     'minor': ['C', 'D#', 'G'],
