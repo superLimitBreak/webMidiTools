@@ -24,3 +24,11 @@ Permissions
     * Phase 1: Stop exposing Web MIDI API to insecure origins from Chrome 77
     * [chrome://flags/#unsafely-treat-insecure-origin-as-secure](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
         * Add `localhost`
+
+Future ideas
+------------
+
+* [Harmonic Coloring](http://www.musanim.com/HarmonicColoring/)
+    * A method for assigning colors to musical pitches 
+* [Piano Trainer](https://github.com/ZaneH/piano-trainer)
+    * Memorize piano scales with ease! A practice program w/ MIDI support
