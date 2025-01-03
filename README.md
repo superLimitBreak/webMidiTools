@@ -25,10 +25,11 @@ Permissions
     * [chrome://flags/#unsafely-treat-insecure-origin-as-secure](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
         * Add `localhost`
 
-Future ideas
+Other Projects: Future ideas?
 ------------
 
 * [Harmonic Coloring](http://www.musanim.com/HarmonicColoring/)
     * A method for assigning colors to musical pitches 
 * [Piano Trainer](https://github.com/ZaneH/piano-trainer)
     * Memorize piano scales with ease! A practice program w/ MIDI support
+* [MUSIC & GEOMETRY – PART 1 – INTERVALS & SCALES](https://roelsworld.eu/blog-music/music-geometry-intervals-scales/)
